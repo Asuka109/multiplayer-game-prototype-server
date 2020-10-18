@@ -1,13 +1,6 @@
-const WebSocket = require('ws')
+const WebSocketServer = require('./websocket')
 
-const wss = new WebSocket.Server({ port: 3000 })
-
-const broadcast = (data, cb) => wss.clients.forEach(
-  client => {
-    if (client.readyState === WebSocket.OPEN)
-      client.send(data, cb);
-  }
-)
+const wss = new WebSocketServer({ port: 3000 })
 
 wss.on('connection', ws => {
   console.log(`[SERVER] Connection`)
@@ -15,7 +8,7 @@ wss.on('connection', ws => {
   ws.on('message', msg => {
     console.log(`[SERVER] Received: ${msg}`)
     setTimeout(() => {
-      broadcast(msg, err => err && console.log(`[SERVER] Error: ${err}`));
+      wss.broadcast(msg, err => err && console.log(`[SERVER] Error: ${err}`))
     }, Math.random() * 100)
     
   })
@@ -29,4 +22,4 @@ wss.on('connection', ws => {
   }))
 })
 
-console.log('[SERVER] Listen on port 3000');
+console.log('[SERVER] Listen on port 3000')
