@@ -1,18 +1,32 @@
-const { Server } = require('ws')
+const WebSocket = require('ws')
 
-const wss = new Server({ port: 3000 })
+const wss = new WebSocket.Server({ port: 3000 })
+
+const broadcast = (data, cb) => wss.clients.forEach(
+  client => {
+    if (client.readyState === WebSocket.OPEN)
+      client.send(data, cb);
+  }
+)
 
 wss.on('connection', ws => {
-  console.log(`[SERVER] connection()`)
+  console.log(`[SERVER] Connection`)
+
+  ws.on('message', msg => {
+    console.log(`[SERVER] Received: ${msg}`)
+    setTimeout(() => {
+      broadcast(msg, err => err && console.log(`[SERVER] Error: ${err}`));
+    }, Math.random() * 100)
+    
+  })
+  
   ws.send(JSON.stringify({
     id: 0,
     frameType: 'StatusFrame',
     status: [
-      { id: "asd", pos: [1000, 1000] }
+      { userId: "asd", pos: [1000, 1000] }
     ]
   }))
-  ws.on('message', msg => {
-    console.log(`[SERVER] Received: ${msg}`)
-    ws.send(msg, err => err && console.log(`[SERVER] error: ${err}`));
-  })
 })
+
+console.log('[SERVER] Listen on port 3000');
