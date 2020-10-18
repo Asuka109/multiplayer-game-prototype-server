@@ -7,10 +7,14 @@ const send = (ws, data) => {
   ws.send(_data)
 }
 
-let playerCount = 0
+let playerList = []
 let actionPool = []
 
 wss.on('connection', (ws, req) => {
+  const clearConnections = () => {
+    wss.clients.forEach(client => client.close())
+    playerList = []
+  }
   console.log(`[SERVER] Connection: [${req.connection.remoteAddress}]`)
 
   ws.on('message', msg => {
@@ -18,24 +22,33 @@ wss.on('connection', (ws, req) => {
     const frame = JSON.parse(msg)
     if (frame.frameType === 'InfoFrame') {
       if (frame.info === 'ready') {
-        playerCount ++
-        if (playerCount >= 2)
-          wss.broadcast(msg, err => err && console.log(`[SERVER] Error: ${err}`))
+        if (playerList.length < 2) {
+          playerList.push(frame.userId)
+          if (playerList.length == 2) {
+            wss.broadcast(msg)
+            wss.broadcast({
+              id: 0,
+              frameType: 'StatusFrame',
+              status: [
+                { userId: playerList[0], pos: [1000, 1000] },
+                { userId: playerList[1], pos: [1000, -1000] }
+              ]
+            })
+          }
+        } else if (playerList.length >= 2) {
+          ws.close()
+        }
       }
-      return
+      if (frame.info === 'exit')
+        clearConnections()
     }
     if (frame.frameType === 'ActionFrame') {
       actionPool.push(frame.actions)
     }
   })
+  ws.on('error', clearConnections)
+  ws.on('close', clearConnections)
   
-  send(ws, {
-    id: 0,
-    frameType: 'StatusFrame',
-    status: [
-      { userId: "asd", pos: [1000, 1000] }
-    ]
-  })
 })
 
 setInterval(() => {
